@@ -31,4 +31,4 @@ void System_Clock_Init(void)
 
 /* USER CODE END 4 */
 
-/* usart1.c END */
+/* rcc.c END */
