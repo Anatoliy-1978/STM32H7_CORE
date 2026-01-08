@@ -10,7 +10,7 @@
  
 /* Function prototypes */
 void USART1_Init(void); 
-void USART1_SendChar(char c);
+void USART1_SendString(const char *s);
 /* Function prototypes END */
  
 /* USER CODE 0 */
@@ -20,7 +20,7 @@ void USART1_SendChar(char c);
 int main(void)
 {
     USART1_Init();
-    USART1_SendString("HELLOU...");
+    USART1_SendString("===Start_STM32H743IIT6===...");
     USART1_SendString("Ok\n\r");
     while(1)
     {
@@ -31,4 +31,5 @@ int main(void)
  
 /* main.c END */
  
+
  
