@@ -10,7 +10,7 @@
 #endif
 
 #include "stm32h7xx.h"
-
+void System_Clock_Init(void);
 
 #ifdef __cplusplus
 }
