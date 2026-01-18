@@ -57,11 +57,13 @@ void USART1_SendChar(char c)
 {
     while ((USART1->ISR & USART_ISR_TXE_TXFNF) == 0U)
     {
-        // æä¸ì, ïîêà ïåðåäàòî÷íûé áóôåð îñâîáîäèòñÿ
+        // ждём, пока передаточный буфер освободится
     }
     USART1->TDR = (uint8_t)c;
 }
 /* USER CODE END 2 */
+
+/* USER CODE 3 */
 void USART1_SendString(const char *s)
 {
     while (*s != '\0')
@@ -70,13 +72,61 @@ void USART1_SendString(const char *s)
         s++;
     }
 }
-/* USER CODE 3 */
 
 /* USER CODE END 3 */
 
 /* USER CODE 4 */
-
+void USART1_SendDecimal(uint32_t num)
+{
+    char buffer[10];
+    int i = 0;
+    
+    if (num == 0) {
+        USART1_SendChar('0');
+        return;
+    }
+    
+    while (num > 0) {
+        buffer[i++] = '0' + (num % 10);
+        num /= 10;
+    }
+    
+    while (i > 0) {
+        USART1_SendChar(buffer[--i]);
+    }
+}
 /* USER CODE END 4 */
 
+/* USER CODE 5 */
+void USART1_SendHex(uint32_t num)
+{
+    char hex_chars[] = "0123456789ABCDEF";
+    char buffer[9];
+    int i;
+    
+    if (num == 0) {
+        USART1_SendString("0");
+        return;
+    }
+    
+    // Заполняем буфер с конца
+    for (i = 7; i >= 0; i--) {
+        buffer[i] = hex_chars[num & 0xF];
+        num >>= 4;
+    }
+    
+    // Пропускаем ведущие нули
+    int start = 0;
+    while (start < 7 && buffer[start] == '0') {
+        start++;
+    }
+    
+    // Выводим оставшиеся символы
+    for (i = start; i < 8; i++) {
+        USART1_SendChar(buffer[i]);
+    }
+}
+/* USER CODE END 5 */
 
 /* usart1.c END */
+
