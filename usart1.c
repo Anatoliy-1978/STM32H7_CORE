@@ -14,41 +14,50 @@
 /* USER CODE 0 */
 void USART1_Init(void)
 {
-    //включаем тактирование GPIOA
+    //РІРєР»СЋС‡Р°РµРј С‚Р°РєС‚РёСЂРѕРІР°РЅРёРµ GPIOA
     RCC->AHB4ENR |= RCC_AHB4ENR_GPIOAEN;
-    //включаем USART1 на шине APB2  
+    //РІРєР»СЋС‡Р°РµРј USART1 РЅР° С€РёРЅРµ APB2  
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
-    //очищаем регистр режима ввода/вывода GPIOA
+    //РѕС‡РёС‰Р°РµРј СЂРµРіРёСЃС‚СЂ СЂРµР¶РёРјР° РІРІРѕРґР°/РІС‹РІРѕРґР° GPIOA
     GPIOA->MODER &= ~(GPIO_MODER_MODE9_Msk | GPIO_MODER_MODE10_Msk);
-    // Устанавливаем значение 0х02, режим порта альтернативные функции (AF)
+    // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р·РЅР°С‡РµРЅРёРµ 0С…02, СЂРµР¶РёРј РїРѕСЂС‚Р° Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅС‹Рµ С„СѓРЅРєС†РёРё (AF)
     GPIOA->MODER |= (GPIO_MODER_MODE9_1 | GPIO_MODER_MODE10_1);
-    // включаем подтяжку RX на PA10
+    // РІРєР»СЋС‡Р°РµРј РїРѕРґС‚СЏР¶РєСѓ RX РЅР° PA10
     GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD9_Msk | GPIO_PUPDR_PUPD10_Msk);
     GPIOA->PUPDR |=  GPIO_PUPDR_PUPD10_0;
     
-    // Выбираем альтернативную функцию для PA9/PA10 AF7 верхнего регистра
-    // очищаем регистр AFR[1] порты PA9/PA10
+    // Р’С‹Р±РёСЂР°РµРј Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅСѓСЋ С„СѓРЅРєС†РёСЋ РґР»СЏ PA9/PA10 AF7 РІРµСЂС…РЅРµРіРѕ СЂРµРіРёСЃС‚СЂР°
+    // РѕС‡РёС‰Р°РµРј СЂРµРіРёСЃС‚СЂ AFR[1] РїРѕСЂС‚С‹ PA9/PA10
     GPIOA->AFR[1] &= ~(GPIO_AFRH_AFSEL9_Msk | GPIO_AFRH_AFSEL10_Msk);
-    //устанавливаем AF7 в регистр AFR[1] порты PA9/PA10
+    //СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј AF7 РІ СЂРµРіРёСЃС‚СЂ AFR[1] РїРѕСЂС‚С‹ PA9/PA10
     GPIOA->AFR[1] |= ((7 << GPIO_AFRH_AFSEL9_Pos) | (7 << GPIO_AFRH_AFSEL10_Pos));
     
-    uint32_t pclk2    = 64000000U;
-    uint32_t baudrate = 115200U;
-    uint32_t usartdiv = (pclk2 + (baudrate / 2U)) / baudrate;
-    // настройка скорости
-    USART1->BRR = usartdiv;
-    USART1->CR1 = 0;                 // сброс настроек
-    USART1->CR1 |= USART_CR1_TE;     // включить передатчик
-    USART1->CR1 |= USART_CR1_RE;     // включить приёмник
-    USART1->CR1 |= USART_CR1_UE;     // включить USART
+    /* РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј BRR РґР»СЏ 64 РњР“С† Рё 115200 Р±РѕРґ
+     * Р Р°СЃС‡РµС‚: USARTDIV = 64,000,000 / (16 * 115,200) = 34,722222
+     * Mantissa = 34 (0x22), Fraction = 12 (0.722222 * 16 = 11,555552 ~ 12)
+     * BRR = (34 << 4) | 12 = 0x22C
+     */
+    
+    USART1->BRR = (0x22 << USART_BRR_DIV_MANTISSA_Pos) |  // DIV_Mantissa = 34
+                  (0xC << USART_BRR_DIV_FRACTION_Pos);    // DIV_Fraction = 12
+   // uint32_t pclk2    = 64000000U;
+    //uint32_t baudrate = 115200U;
+    //uint32_t usartdiv = (pclk2 + (baudrate / 2U)) / baudrate;
+    // РЅР°СЃС‚СЂРѕР№РєР° СЃРєРѕСЂРѕСЃС‚Рё
+    //USART1->BRR = usartdiv;
+    USART1->CR1 = 0;                 // СЃР±СЂРѕСЃ РЅР°СЃС‚СЂРѕРµРє
+    USART1->CR1 |= USART_CR1_TE;     // РІРєР»СЋС‡РёС‚СЊ РїРµСЂРµРґР°С‚С‡РёРє
+    USART1->CR1 |= USART_CR1_RE;     // РІРєР»СЋС‡РёС‚СЊ РїСЂРёС‘РјРЅРёРє
+    USART1->CR1 |= USART_CR1_UE;     // РІРєР»СЋС‡РёС‚СЊ USART
 }
+
 
 /* USER CODE 2 */
 void USART1_SendChar(char c)
 {
     while ((USART1->ISR & USART_ISR_TXE_TXFNF) == 0U)
     {
-        // ждём, пока передаточный буфер освободится
+        // Г¦Г¤ВёГ¬, ГЇГ®ГЄГ  ГЇГҐГ°ГҐГ¤Г ГІГ®Г·Г­Г»Г© ГЎГіГґГҐГ° Г®Г±ГўГ®ГЎГ®Г¤ГЁГІГ±Гї
     }
     USART1->TDR = (uint8_t)c;
 }
@@ -68,5 +77,6 @@ void USART1_SendString(const char *s)
 /* USER CODE 4 */
 
 /* USER CODE END 4 */
+
 
 /* usart1.c END */
