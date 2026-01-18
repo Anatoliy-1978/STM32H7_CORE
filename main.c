@@ -10,7 +10,7 @@
  
 /* Function prototypes */
 void USART1_Init(void); 
-void USART1_SendString(const char *s);
+void System_Clock_Init(void);
 /* Function prototypes END */
  
 /* USER CODE 0 */
@@ -40,4 +40,5 @@ int main(void)
  
 
  
+
 
