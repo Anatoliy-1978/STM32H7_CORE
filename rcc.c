@@ -80,6 +80,8 @@ void System_Clock_Init(void)
     }
     USART1_SendString("OK\n\r");
     
+    MPU_Config_Internal();
+    
     /* ==================== РАЗДЕЛ 2: НАСТРОЙКА FLASH ==================== */
     
     /* Шаг 2.1: Настройка латентности Flash-памяти
@@ -96,6 +98,9 @@ void System_Clock_Init(void)
                FLASH_ACR_LATENCY_2WS |      // 2 Wait States для 200 МГц при VOS1
                FLASH_ACR_WRHIGHFREQ_1);     // Режим высокой скорости записи
     USART1_SendString("OK\n\r");
+    
+    
+     MPU_Config_Flash();
     
     /* ==================== РАЗДЕЛ 3: ВНЕШНИЙ ГЕНЕРАТОР HSE ==================== */
     
@@ -237,13 +242,13 @@ void System_Clock_Init(void)
      * - P1[6:0] (биты 16:10): Делитель выхода P
      *   2: 800 МГц / 2 = 400 МГц (частота CPU)
      * - Q1[6:0] (биты 24:18): Делитель выхода Q
-     *   5: 800 МГц / 5 = 160 МГц (для FMC)
+     *   5: 800 МГц / 4 = 200 МГц (для FMC)
      * - R1[6:0] (биты 32:26): Делитель выхода R
      *   1: 800 МГц / 1 = 800 МГц (резерв)
      */
     RCC->PLL1DIVR = (160U << RCC_PLL1DIVR_N1_Pos) |  // N = 160
                     (1U << RCC_PLL1DIVR_P1_Pos)   |  // P = 2
-                    (5U << RCC_PLL1DIVR_Q1_Pos)   |  // Q = 5
+                    (4U << RCC_PLL1DIVR_Q1_Pos)   |  // Q = 4
                     (1U << RCC_PLL1DIVR_R1_Pos);     // R = 1
     
     /* Шаг 6.5: Включение PLL1 */
@@ -432,10 +437,91 @@ void System_Clock_Init(void)
 /* USER CODE END 0 */
 
 /* USER CODE 2 */
-
+    /* Приватная функция настройки MPU для внутренней памяти */
+void MPU_Config_Internal(void)
+{
+    USART1_SendString("MPU Phase 1: Internal Memory...");
+    
+    /* 1. Отключаем MPU */
+    MPU->CTRL = 0;
+    
+    /* 2. Регион 0: ITCM RAM (64KB) - инструкции */
+    MPU->RNR = 0;
+    MPU->RBAR = D1_ITCMRAM_BASE;  /* 0x00000000 */
+    MPU->RASR = (0UL << MPU_RASR_XN_Pos) |      /* Разрешить исполнение */
+                (0x3UL << MPU_RASR_AP_Pos) |    /* Privileged: RW, User: RW */
+                (0x1UL << MPU_RASR_TEX_Pos) |   /* TEX=001 (Normal) */
+                (1UL << MPU_RASR_S_Pos) |       /* Shareable */
+                (1UL << MPU_RASR_C_Pos) |       /* Cacheable */
+                (0UL << MPU_RASR_B_Pos) |       /* Not Bufferable */
+                (0x15UL << MPU_RASR_SIZE_Pos) | /* 64KB (2^(15+1)) */
+                (1UL << MPU_RASR_ENABLE_Pos);   /* Enable region */
+    
+    /* 3. Регион 1: DTCM RAM (128KB) - данные и стек */
+    MPU->RNR = 1;
+    MPU->RBAR = D1_DTCMRAM_BASE;  /* 0x20000000 */
+    MPU->RASR = (0UL << MPU_RASR_XN_Pos) |
+                (0x3UL << MPU_RASR_AP_Pos) |
+                (0x1UL << MPU_RASR_TEX_Pos) |
+                (1UL << MPU_RASR_S_Pos) |
+                (1UL << MPU_RASR_C_Pos) |
+                (0UL << MPU_RASR_B_Pos) |
+                (0x10UL << MPU_RASR_SIZE_Pos) | /* 128KB (2^(16+1)) */
+                (1UL << MPU_RASR_ENABLE_Pos);
+    
+    /* 4. Включаем MPU с привилегированным доступом по умолчанию */
+    MPU->CTRL = MPU_CTRL_ENABLE_Msk | MPU_CTRL_PRIVDEFENA_Msk;
+    
+    /* 5. Барьеры памяти (критически важно!) */
+    __DSB();
+    __ISB();
+    
+    USART1_SendString("OK\n\r");
+}
 /* USER CODE END 2 */
 
 /* USER CODE 3 */
+/* Приватная функция настройки MPU для Flash памяти */
+void MPU_Config_Flash(void)
+{
+    USART1_SendString("MPU Phase 1: Flash Memory...");
+    
+    /* Временно отключаем MPU */
+    uint32_t mpu_ctrl = MPU->CTRL;
+    MPU->CTRL = 0;
+    
+    /* 6. Регион 2: Flash Bank 1 (1MB) */
+    MPU->RNR = 2;
+    MPU->RBAR = FLASH_BANK1_BASE;  /* 0x08000000 */
+    MPU->RASR = (0UL << MPU_RASR_XN_Pos) |      /* Разрешить исполнение кода */
+                (0x1UL << MPU_RASR_AP_Pos) |    /* Privileged: RO, User: RO */
+                (0x0UL << MPU_RASR_TEX_Pos) |   /* TEX=000 (Device-like) */
+                (0UL << MPU_RASR_S_Pos) |       /* Not Shareable */
+                (1UL << MPU_RASR_C_Pos) |       /* Cacheable (инструкции) */
+                (0UL << MPU_RASR_B_Pos) |       /* Not Bufferable */
+                (0x13UL << MPU_RASR_SIZE_Pos) | /* 1MB (2^(19+1)) */
+                (1UL << MPU_RASR_ENABLE_Pos);
+    
+    /* 7. Регион 3: Flash Bank 2 (1MB) */
+    MPU->RNR = 3;
+    MPU->RBAR = FLASH_BANK2_BASE;  /* 0x08100000 */
+    MPU->RASR = (0UL << MPU_RASR_XN_Pos) |
+                (0x1UL << MPU_RASR_AP_Pos) |
+                (0x0UL << MPU_RASR_TEX_Pos) |
+                (0UL << MPU_RASR_S_Pos) |
+                (1UL << MPU_RASR_C_Pos) |
+                (0UL << MPU_RASR_B_Pos) |
+                (0x13UL << MPU_RASR_SIZE_Pos) | /* 1MB */
+                (1UL << MPU_RASR_ENABLE_Pos);
+    
+    /* Включаем MPU обратно */
+    MPU->CTRL = mpu_ctrl;
+    
+    __DSB();
+    __ISB();
+    
+    USART1_SendString("OK\n\r");
+}
 
 /* USER CODE END 3 */
 
