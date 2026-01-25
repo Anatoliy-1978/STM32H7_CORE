@@ -51,7 +51,6 @@ void USART1_Init(void)
     USART1->CR1 |= USART_CR1_UE;     // включить USART
 }
 
-
 /* USER CODE 2 */
 void USART1_SendChar(char c)
 {
@@ -72,7 +71,6 @@ void USART1_SendString(const char *s)
         s++;
     }
 }
-
 /* USER CODE END 3 */
 
 /* USER CODE 4 */
@@ -98,13 +96,13 @@ void USART1_SendDecimal(uint32_t num)
 /* USER CODE END 4 */
 
 /* USER CODE 5 */
-void USART1_SendHex(uint32_t num)
+void USART1_SendHex(uint32_t num, uint8_t width)
 {
     char hex_chars[] = "0123456789ABCDEF";
     char buffer[9];
     int i;
     
-    if (num == 0) {
+    if (num == 0 && width == 0) {
         USART1_SendString("0");
         return;
     }
@@ -115,11 +113,20 @@ void USART1_SendHex(uint32_t num)
         num >>= 4;
     }
     
-    // Пропускаем ведущие нули
-    int start = 0;
-    while (start < 7 && buffer[start] == '0') {
-        start++;
+    // Определяем сколько символов выводить
+    int start = 8 - width;
+    if (start < 0) start = 0;
+    
+    // Пропускаем ведущие нули, если width не задан
+    if (width == 0) {
+        start = 0;
+        while (start < 7 && buffer[start] == '0') {
+            start++;
+        }
     }
+    
+    // Выводим префикс 0x
+    USART1_SendString("0x");
     
     // Выводим оставшиеся символы
     for (i = start; i < 8; i++) {
@@ -128,5 +135,29 @@ void USART1_SendHex(uint32_t num)
 }
 /* USER CODE END 5 */
 
+/* USER CODE 6 */
+// Быстрая версия для 8-битных значений
+void USART1_SendHex8(uint8_t num)
+{
+    char hex_chars[] = "0123456789ABCDEF";
+    USART1_SendString("0x");
+    USART1_SendChar(hex_chars[(num >> 4) & 0xF]);
+    USART1_SendChar(hex_chars[num & 0xF]);
+}
+
+// Версия для 16-битных значений
+void USART1_SendHex16(uint16_t num)
+{
+    USART1_SendHex(num, 4);
+}
+
+// Версия для 32-битных значений
+void USART1_SendHex32(uint32_t num)
+{
+    USART1_SendHex(num, 8);
+}
+/* USER CODE END 6 */
+
 /* usart1.c END */
+
 
