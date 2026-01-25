@@ -11,11 +11,14 @@
 
 #include "stm32h7xx.h"
 
-
+#define FMC_KER_CLK_HZ      200000000UL
+#define SDRAM_CLK_HZ        (FMC_KER_CLK_HZ / 2U)  // 100 МГц
+#define SDRAM_BASE          0xC0000000UL
+#define SDRAM_SIZE          (32U * 1024U * 1024U)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // USART1_H
+#endif // __MAIN_H__
 
